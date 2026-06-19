@@ -25,6 +25,10 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
+      - name: Force Higher iOS Deployment Target
+        run: |
+          sed -i '' 's/platform :ios, '"'"'12.0'"'"'/platform :ios, '"'"'13.0'"'"'/g' ios/App/Podfile
+
       - name: Generate App Icons
         run: |
           mkdir -p assets
