@@ -13,11 +13,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Capacitor
+      - name: Structure Directories
+        run: |
+          mkdir -p www
+          cp index.html www/ 2>/dev/null || true
+          cp game.js www/ 2>/dev/null || true
+          cp style.css www/ 2>/dev/null || true
+
+      - name: Initialize and Install Capacitor
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli
-          npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=.
+          npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=www --confirm
           npm install @capacitor/ios
           npx cap add ios
 
