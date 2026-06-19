@@ -20,14 +20,20 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           
-      - name: Create Native iOS Project Structure
+      - name: Pre-configure CocoaPods Deployment Target
+        run: |
+          mkdir -p ios/App
+          cat << 'EOF' > ios/App/Podfile
+          platform :ios, '13.0'
+          target 'App' do
+            # Capacitor Pods are automatically appended here during cap add
+          end
+          EOF
+
+      - name: Create Native iOS Project
         run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios --no-sync
-
-      - name: Force Higher iOS Deployment Target
-        run: |
-          sed -i '' 's/platform :ios, '"'"'12.0'"'"'/platform :ios, '"'"'13.0'"'"'/g' ios/App/Podfile
+          npx cap add ios
 
       - name: Generate App Icons
         run: |
@@ -35,10 +41,9 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Sync and Install Pods
+      - name: Sync Code and Update Pods
         run: |
           npx cap sync ios
-          cd ios/App && pod install
 
       - name: Build Xcode Project
         run: |
