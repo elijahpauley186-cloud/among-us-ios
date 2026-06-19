@@ -1,0 +1,6 @@
+{
+  "appId": "com.tvman.amongusdetectiveevolution",
+  "appName": "Among Us: Detective Evolution",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
