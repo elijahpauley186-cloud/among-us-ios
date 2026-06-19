@@ -30,16 +30,21 @@ jobs:
 
       - name: Force Higher iOS Deployment Target
         run: |
-          sed -i '' 's/platform :ios, '"'"'13.0'"'"'/platform :ios, '"'"'14.0'"'"'/g' ios/App/Podfile
+          sed -i '' 's/platform :ios, '"'"'14.0'"'"'/platform :ios, '"'"'14.0'"'"'/g' ios/App/Podfile
 
-      - name: Build iOS App Folder
+      - name: Sync Web Assets
         run: |
           npx cap sync ios
+
+      - name: Compile Native iOS App Binary
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
       - name: Micro-Bundle IPA (Unsigned Payload)
         run: |
           mkdir -p Payload
-          cp -r ios/App/App.app Payload/
+          cp -r ios/App/build/Build/Products/Debug-iphoneos/App.app Payload/
           zip -r AmongUs.ipa Payload
 
       - name: Upload Finished IPA
