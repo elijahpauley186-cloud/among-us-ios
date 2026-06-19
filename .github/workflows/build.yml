@@ -24,7 +24,7 @@ jobs:
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli
-          npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=www --confirm
+          npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=www
           npm install @capacitor/ios
           npx cap add ios
 
