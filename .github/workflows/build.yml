@@ -19,26 +19,17 @@ jobs:
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
-          
+
       - name: Create Native iOS Project
         run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios || true
+          # Skip the initial install so it doesn't crash
+          npx cap add ios --no-pod-install || true
 
       - name: Force Higher iOS Deployment Target
         run: |
-          # Completely overwrite the Podfile with an iOS 14.0 baseline rule
-          cat << 'EOF' > ios/App/Podfile
-          platform :ios, '14.0'
-          use_frameworks!
-
-          # Target definition matching the Capacitor app structure
-          target 'App' do
-            # Automatically find and include Capacitor dependencies
-            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-          end
-          EOF
+          # This command ensures the platform target is written correctly in the Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/g" ios/App/Podfile
 
       - name: Generate App Icons
         run: |
@@ -46,13 +37,11 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Run Clean Pod Install
+      - name: Finalize Dependencies and Sync
         run: |
           cd ios/App
-          pod install
-
-      - name: Sync Code
-        run: |
+          pod install --repo-update
+          cd ../..
           npx cap sync ios
 
       - name: Build Xcode Project
