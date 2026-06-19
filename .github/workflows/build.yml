@@ -22,7 +22,7 @@ jobs:
           
       - name: Create Native iOS Project
         run: |
-          npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="."
+          npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
       - name: Generate App Icons
