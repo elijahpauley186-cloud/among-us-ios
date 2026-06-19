@@ -20,10 +20,10 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           
-      - name: Create Native iOS Project
+      - name: Create Native iOS Project Structure
         run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios
+          npx cap add ios --no-sync
 
       - name: Force Higher iOS Deployment Target
         run: |
@@ -35,8 +35,10 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Sync Capacitor Code
-        run: npx cap sync ios
+      - name: Sync and Install Pods
+        run: |
+          npx cap sync ios
+          cd ios/App && pod install
 
       - name: Build Xcode Project
         run: |
