@@ -23,10 +23,14 @@ jobs:
       - name: Initialize and Install Capacitor
         run: |
           npm init -y
-          npm install @capacitor/core @capacitor/cli
+          npm install @capacitor/core@6 @capacitor/cli@6
           npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=www
-          npm install @capacitor/ios
+          npm install @capacitor/ios@6
           npx cap add ios
+
+      - name: Force Higher iOS Deployment Target
+        run: |
+          sed -i '' 's/platform :ios, '"'"'13.0'"'"'/platform :ios, '"'"'14.0'"'"'/g' ios/App/Podfile
 
       - name: Build iOS App Folder
         run: |
