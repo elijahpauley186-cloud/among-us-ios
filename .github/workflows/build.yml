@@ -20,16 +20,15 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           
+      - name: Patch Capacitor iOS Template Target
+        run: |
+          # This replaces '12.0' with '13.0' inside the template package before creation
+          sed -i '' "s/platform :ios, '12.0'/platform :ios, '13.0'/g" node_modules/@capacitor/ios/assets/Podfile
+
       - name: Create Native iOS Project
         run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # We use a custom environment variable to stop CocoaPods from running during initialization
-          export CAPACITOR_SKIP_POD_INSTALL=1
           npx cap add ios
-
-      - name: Force Higher iOS Deployment Target
-        run: |
-          sed -i '' 's/platform :ios, '"'"'12.0'"'"'/platform :ios, '"'"'13.0'"'"'/g' ios/App/Podfile
 
       - name: Generate App Icons
         run: |
@@ -37,10 +36,9 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Sync Code and Install Pods
+      - name: Sync Code
         run: |
           npx cap sync ios
-          cd ios/App && pod install
 
       - name: Build Xcode Project
         run: |
