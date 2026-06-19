@@ -1,5 +1,7 @@
 name: Build iOS IPA
-on: [push]
+on:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -11,44 +13,40 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Structure Directories
-        run: |
-          mkdir -p www
-          cp index.html www/ 2>/dev/null || true
-          cp game.js www/ 2>/dev/null || true
-          cp style.css www/ 2>/dev/null || true
-
-      - name: Initialize and Install Capacitor
+      - name: Install Dependencies
         run: |
           npm init -y
-          npm install @capacitor/core@6 @capacitor/cli@6
-          npx cap init "Among Us iPad" "com.yourname.amongus" --web-dir=www
-          npm install @capacitor/ios@6
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
+          
+      - name: Create Native iOS Project
+        run: |
+          npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="."
           npx cap add ios
 
-      - name: Force Higher iOS Deployment Target
+      - name: Generate App Icons
         run: |
-          sed -i '' 's/platform :ios, '"'"'14.0'"'"'/platform :ios, '"'"'14.0'"'"'/g' ios/App/Podfile
+          mkdir -p assets
+          cp icon.png assets/icon-only.png
+          npx capacitor-assets generate --ios
 
-      - name: Sync Web Assets
-        run: |
-          npx cap sync ios
+      - name: Sync Capacitor Code
+        run: npx cap sync ios
 
-      - name: Compile Native iOS App Binary
+      - name: Build Xcode Project
         run: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
 
-      - name: Micro-Bundle IPA (Unsigned Payload)
+      - name: Package IPA Bundle
         run: |
           mkdir -p Payload
-          cp -r ios/App/build/Build/Products/Debug-iphoneos/App.app Payload/
-          zip -r AmongUs.ipa Payload
+          cp -r ios/App/build/Release-iphoneos/App.app Payload/
+          zip -r AmongUsDetectiveEvolution.ipa Payload
 
-      - name: Upload Finished IPA
+      - name: Upload Finished IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: native-app-package
-          path: AmongUs.ipa
+          name: Among-Us-Detective-Evolution-App
+          path: AmongUsDetectiveEvolution.ipa
