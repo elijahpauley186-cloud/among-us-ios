@@ -20,22 +20,28 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Clean and Create Project
+      - name: Create Native iOS Project (No Pods)
         run: |
-          # Force remove any old folder to ensure a clean state
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios
+          # This flag is the key: it creates the project but skips the crash-prone auto-install
+          npx cap add ios --no-pod-install
 
-      - name: Force Higher iOS Deployment Target
+      - name: Set Deployment Target and Install
         run: |
-          # Overwrite the Podfile explicitly
-          echo "platform :ios, '14.0'" > ios/App/Podfile
-          echo "use_frameworks!" >> ios/App/Podfile
-          echo "target 'App' do" >> ios/App/Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-          echo "end" >> ios/App/Podfile
+          # 1. Manually create/overwrite the Podfile with the correct target
+          cat << 'EOF' > ios/App/Podfile
+          platform :ios, '14.0'
+          use_frameworks!
+          target 'App' do
+            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+          end
+          EOF
+          
+          # 2. Now run the installation manually on our terms
+          cd ios/App
+          pod install --repo-update
 
       - name: Generate App Icons
         run: |
@@ -43,12 +49,8 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Finalize Dependencies
-        run: |
-          cd ios/App
-          pod install --repo-update
-          cd ../..
-          npx cap sync ios
+      - name: Sync Code
+        run: npx cap sync ios
 
       - name: Build Xcode Project
         run: |
