@@ -23,13 +23,22 @@ jobs:
       - name: Create Native iOS Project
         run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # The "|| true" ensures the script keeps moving forward even if the initial pod install throws an error
           npx cap add ios || true
 
       - name: Force Higher iOS Deployment Target
         run: |
-          # Fix the deployment target directly in the freshly created Podfile
-          sed -i '' "s/platform :ios, '12.0'/platform :ios, '13.0'/g" ios/App/Podfile
+          # Completely overwrite the Podfile with an iOS 14.0 baseline rule
+          cat << 'EOF' > ios/App/Podfile
+          platform :ios, '14.0'
+          use_frameworks!
+
+          # Target definition matching the Capacitor app structure
+          target 'App' do
+            # Automatically find and include Capacitor dependencies
+            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+          end
+          EOF
 
       - name: Generate App Icons
         run: |
