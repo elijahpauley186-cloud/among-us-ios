@@ -15,10 +15,14 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install Dependencies
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
+
       - name: Create Web Folder
         run: |
           mkdir -p www
-          # Move files into www so Capacitor doesn't complain about root dir
+          # Move files to www
           mv *.html www/ 2>/dev/null || true
           mv *.js www/ 2>/dev/null || true
           mv *.css www/ 2>/dev/null || true
@@ -29,13 +33,14 @@ jobs:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           rm -rf ios
+          # Ensure npx points to the local node_modules
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
       - name: Manual Pod Configuration
         run: |
           mkdir -p ios/App
-          # Explicitly create a clean Podfile with 14.0
+          # Explicitly create a clean Podfile
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
