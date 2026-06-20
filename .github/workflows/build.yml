@@ -25,9 +25,12 @@ jobs:
 
       - name: Initialize Platform
         run: |
+          # Use Capacitor 6 for native iOS 14.0 compatibility
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
+          
+          # Fake pod binary to bypass CLI sync check
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
@@ -54,16 +57,19 @@ jobs:
         run: |
           npx cap copy ios
           cd ios/App
-          # Build with ARCHS=arm64 to force a clean device build and avoid architecture conflicts
+          
+          # Build with ARCHS=arm64 to force a clean device build
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 ARCHS=arm64
           
-          # Find the generated .app file
-          APP_PATH=$(find . -name "App.app" | grep "Release-iphoneos" | head -n 1)
+          # Dynamically find the App.app wherever Xcode placed it
+          APP_PATH=$(find . -type d -name "App.app" | grep "Release-iphoneos" | head -n 1)
+          
           if [ -z "$APP_PATH" ]; then
             echo "Error: App.app not found."
             exit 1
           fi
           
+          echo "Found App.app at: $APP_PATH"
           mkdir -p ../../Payload
           cp -r "$APP_PATH" ../../Payload/
           cd ../..
