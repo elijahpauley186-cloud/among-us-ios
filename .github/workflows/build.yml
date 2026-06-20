@@ -25,11 +25,12 @@ jobs:
 
       - name: Initialize Platform
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
+          # Force install Capacitor 6, which supports iOS 14.0
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           
-          # Create fake pod binary to bypass CLI sync check
+          # Fake pod binary to bypass CLI sync check
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
@@ -40,11 +41,6 @@ jobs:
       - name: Configure and Install
         run: |
           cd ios/App
-          # Brutally force every podspec in node_modules to accept 14.0
-          find ../../node_modules/@capacitor/ios -name "*.podspec" -exec sed -i '' "s/s.deployment_target = .*/s.deployment_target = '14.0'/g" {} +
-          find ../../node_modules/@capacitor/ios -name "*.podspec" -exec sed -i '' "s/ios.deployment_target = .*/ios.deployment_target = '14.0'/g" {} +
-          
-          # Create fresh Podfile with post_install cleanup
           cat << 'EOF' > Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -52,17 +48,8 @@ jobs:
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
           end
-          
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-              end
-            end
-          end
           EOF
           
-          # Clean and force install
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
