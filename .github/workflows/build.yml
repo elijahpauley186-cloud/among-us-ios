@@ -21,7 +21,8 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
       - name: Initialize and Add iOS Platform
-        # CAPACITOR_SKIP_POD_INSTALL=1 stops the CLI from running pod install
+        # This environment variable tells Capacitor to add the platform 
+        # WITHOUT running pod install, allowing us to configure the Podfile first.
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -31,7 +32,7 @@ jobs:
 
       - name: Configure Podfile and Install
         run: |
-          # Create a fresh Podfile with the required iOS 14.0 target
+          # 1. Create a clean Podfile with the required iOS 14.0 target
           mkdir -p ios/App
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
@@ -42,7 +43,7 @@ jobs:
           end
           EOF
           
-          # Now perform the install manually
+          # 2. Now perform the install manually on our terms
           cd ios/App
           pod install --repo-update
 
