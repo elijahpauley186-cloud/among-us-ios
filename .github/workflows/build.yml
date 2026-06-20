@@ -23,32 +23,38 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Add iOS Platform
-        env:
-          CAPACITOR_SKIP_POD_INSTALL: 1
+      - name: Initialize Platform
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # We use || true because the CLI might try to run pod install and fail, 
-          # but we still need the folder structure it generates.
-          npx cap add ios || true
+          # Use || true to prevent the workflow from crashing during initial sync
+          CAPACITOR_SKIP_POD_INSTALL=1 npx cap add ios || true
 
       - name: Configure and Install
         run: |
           cd ios/App
-          # Create a clean Podfile with 14.0 enforcement
+          # Create the Podfile with the post_install hook to force the deployment target
           cat << 'EOF' > Podfile
           project 'App.xcodeproj'
           platform :ios, '14.0'
           use_frameworks!
+          
           target 'App' do
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
           end
+
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+              end
+            end
+          end
           EOF
           
-          # Clean and force install
+          # Manually install dependencies
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
