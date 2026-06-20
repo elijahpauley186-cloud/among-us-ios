@@ -15,21 +15,29 @@ jobs:
         with:
           node-version: 20
 
+      - name: Prepare Web Assets
+        run: |
+          mkdir -p www
+          [ -f index.html ] && mv index.html www/ || true
+          [ -f style.css ] && mv style.css www/ || true
+          [ -f game.js ] && mv game.js www/ || true
+
       - name: Initialize Platform
         run: |
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           
-          # Generate icons - no --icon flag needed, it detects icon.png automatically
+          # Add platform and generate assets
+          npx cap add ios
           npx capacitor-assets generate --ios
           
+          # Mock pod binary
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
           chmod +x bin/pod
           export PATH=$PWD/bin:$PATH
-          npx cap add ios
 
       - name: Configure and Install
         run: |
@@ -51,17 +59,12 @@ jobs:
           npx cap copy ios
           cd ios/App
           
-          # Archive build to ensure all modules are linked properly
+          # Clean and Archive build
+          xcodebuild clean -workspace App.xcworkspace -scheme App
           xcodebuild archive -workspace App.xcworkspace -scheme App -sdk iphoneos -archivePath App.xcarchive -configuration Release CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 ARCHS=arm64
           
-          # The archive puts the .app here reliably
+          # Extract and zip
           APP_PATH="App.xcarchive/Products/Applications/App.app"
-          
-          if [ ! -d "$APP_PATH" ]; then
-            echo "Error: App.app not found in archive."
-            exit 1
-          fi
-          
           mkdir -p ../../Payload
           cp -r "$APP_PATH" ../../Payload/
           cd ../..
