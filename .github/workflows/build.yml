@@ -29,7 +29,7 @@ jobs:
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           
-          # Fake pod binary to bypass CLI sync check
+          # Create fake pod binary to bypass CLI sync check
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
@@ -40,24 +40,36 @@ jobs:
       - name: Configure and Install
         run: |
           cd ios/App
-          # Patch the Capacitor podspec to allow iOS 14.0 before install
-          find ../../node_modules/@capacitor/ios -name "*.podspec" -exec sed -i '' 's/ios.deployment_target = .*/ios.deployment_target = '\''14.0'\''/g' {} +
-          
-          # Create fresh Podfile
+          # This Podfile uses both pre_install (for solver) and post_install (for build settings)
           cat << 'EOF' > Podfile
           platform :ios, '14.0'
           use_frameworks!
+          
+          pre_install do |installer|
+            installer.pod_targets.each do |target|
+              target.send(:instance_variable_set, :@minimum_deployment_target, '14.0')
+            end
+          end
+          
           target 'App' do
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
           end
+          
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+              end
+            end
+          end
           EOF
           
-          # Perform clean installation
+          # Clean and force install
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
-
+          
       - name: Build and Package
         run: |
           npx cap copy ios
