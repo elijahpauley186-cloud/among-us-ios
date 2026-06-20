@@ -6,9 +6,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    # Define the variable globally for all steps in this job
-    env:
-      CAPACITOR_SKIP_POD_INSTALL: 1
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -26,18 +23,22 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Add iOS Platform
+      - name: Add iOS Platform (Intercepted)
+        env:
+          CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # This should now skip the automatic pod install
+          
+          # Add platform and immediately move the Podfile so the CLI can't touch it
           npx cap add ios
+          [ -f ios/App/Podfile ] && mv ios/App/Podfile ios/App/Podfile.bak
 
-      - name: Manually Configure and Install Pods
+      - name: Manual Podfile Enforcement
         run: |
           cd ios/App
-          # Create the Podfile with the correct target
+          # Create our own Podfile with the 14.0 requirement
           cat << 'EOF' > Podfile
           project 'App.xcodeproj'
           platform :ios, '14.0'
@@ -48,7 +49,7 @@ jobs:
           end
           EOF
           
-          # Manually install pods
+          # Now perform the install with the correct constraints
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
