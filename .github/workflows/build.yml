@@ -15,26 +15,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Prepare Web Assets
-        run: |
-          mkdir -p www
-          [ -f index.html ] && mv index.html www/ || true
-          [ -f style.css ] && mv style.css www/ || true
-          [ -f game.js ] && mv game.js www/ || true
-          # We don't move icon.png here, we keep it in root for the generator
-
       - name: Initialize Platform
         run: |
-          # Install dependencies including capacitor-assets
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           
-          # 1. Generate icons automatically
-          # This creates the necessary AppIcon sets in ios/App/App/Assets.xcassets/
-          npx capacitor-assets generate --ios --icon icon.png
+          # Generate icons - no --icon flag needed, it detects icon.png automatically
+          npx capacitor-assets generate --ios
           
-          # Fake pod binary to bypass CLI sync check
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
@@ -62,14 +51,14 @@ jobs:
           npx cap copy ios
           cd ios/App
           
-          # Build an Archive
+          # Archive build to ensure all modules are linked properly
           xcodebuild archive -workspace App.xcworkspace -scheme App -sdk iphoneos -archivePath App.xcarchive -configuration Release CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 ARCHS=arm64
           
-          # Locate .app inside the archive
-          APP_PATH=$(find App.xcarchive -name "App.app" | head -n 1)
+          # The archive puts the .app here reliably
+          APP_PATH="App.xcarchive/Products/Applications/App.app"
           
           if [ ! -d "$APP_PATH" ]; then
-            echo "Error: App.app not found."
+            echo "Error: App.app not found in archive."
             exit 1
           fi
           
