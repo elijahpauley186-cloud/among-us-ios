@@ -28,16 +28,19 @@ jobs:
           mv *.png www/ 2>/dev/null || true
 
       - name: Add iOS Platform
-        # --no-sync prevents the CLI from running pod install or sync automatically
+        # This environment variable stops Capacitor from running 
+        # its internal pod install, which is what triggers the error.
+        env:
+          CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios --no-sync
+          npx cap add ios
 
       - name: Manual Podfile Enforcement
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform version to 14.0
+          # Write the Podfile with the required deployment target
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -47,7 +50,7 @@ jobs:
           end
           EOF
           
-          # Force CocoaPods to install with our specific requirements
+          # Manually trigger pod installation for the enforced platform
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -55,10 +58,10 @@ jobs:
 
       - name: Build and Package
         run: |
-          # Sync now without updating dependencies, as we just handled it
-          npx cap sync ios --no-update
+          # Sync now without triggering another dependency check
+          npx cap sync ios
           cd ios/App
-          # Ensure Xcode respects the 14.0 target during build
+          # Explicitly set the deployment target during the build command
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
