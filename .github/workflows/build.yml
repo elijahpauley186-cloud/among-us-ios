@@ -15,28 +15,33 @@ jobs:
         with:
           node-version: 20
 
+      - name: Install Dependencies
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
+
       - name: Prepare Web Assets
         run: |
           mkdir -p www
-          [ -f index.html ] && cp index.html www/
-          [ -f style.css ] && cp style.css www/
-          [ -f game.js ] && cp game.js www/
-          [ -f icon.png ] && cp icon.png www/
+          # Ensures your files are in the directory Capacitor expects
+          [ -f index.html ] && mv index.html www/ 2>/dev/null || true
+          [ -f style.css ] && mv style.css www/ 2>/dev/null || true
+          [ -f game.js ] && mv game.js www/ 2>/dev/null || true
+          [ -f icon.png ] && mv icon.png www/ 2>/dev/null || true
 
-      - name: Initialize iOS Platform (Manual Mode)
-        # CAPACITOR_SKIP_POD_INSTALL stops the CLI from running its internal, incompatible pod install
+      - name: Initialize iOS Platform
+        # CAPACITOR_SKIP_POD_INSTALL=1 prevents the CLI from running its 
+        # own incompatible pod install
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Manual Podfile Enforcement
+      - name: Enforce iOS 14.0 Target
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform to 14.0 in the Podfile
+          # Explicitly write the Podfile with the required deployment target
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -46,7 +51,7 @@ jobs:
           end
           EOF
           
-          # Manually install pods with the correct target
+          # Manually install dependencies with the enforced target
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -56,7 +61,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Ensure Xcode respects the 14.0 target
+          # Explicitly set the deployment target during the build command for final compliance
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
