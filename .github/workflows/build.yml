@@ -27,7 +27,8 @@ jobs:
           mv *.css www/ 2>/dev/null || true
           mv *.png www/ 2>/dev/null || true
 
-      - name: Initialize iOS Platform
+      - name: Initialize iOS Platform (Safe Mode)
+        # CAPACITOR_SKIP_POD_INSTALL=1 is MANDATORY to prevent CLI interference
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -35,28 +36,25 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Force iOS 14.0 and Install
+      - name: Finalize iOS Configuration
         run: |
-          # Create strict Podfile
+          # 1. Force the platform target globally for the build
           mkdir -p ios/App
-          cat << 'EOF' > ios/App/Podfile
-          platform :ios, '14.0'
-          use_frameworks!
-          target 'App' do
-            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-          end
-          EOF
+          echo "platform :ios, '14.0'" > ios/App/Podfile
+          echo "use_frameworks!" >> ios/App/Podfile
+          echo "target 'App' do" >> ios/App/Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "end" >> ios/App/Podfile
           
-          # Clean and install
+          # 2. Force CocoaPods to use this Podfile and ignore the cache
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
-          pod install
+          pod install --deployment
 
       - name: Build and Package
         run: |
-          npx cap sync ios
           cd ios/App
           # Explicitly set the deployment target during the build command
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
