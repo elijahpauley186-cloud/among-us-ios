@@ -22,27 +22,24 @@ jobs:
       - name: Prepare Web Assets
         run: |
           mkdir -p www
-          # Ensure your index.html and other assets are in the 'www' folder
-          # The previous logs show you are copying from 'www'
-          [ -f index.html ] && mv index.html www/ || true
-          [ -f style.css ] && mv style.css www/ || true
-          [ -f game.js ] && mv game.js www/ || true
-          [ -f icon.png ] && mv icon.png www/ || true
+          mv *.html www/ 2>/dev/null || true
+          mv *.js www/ 2>/dev/null || true
+          mv *.css www/ 2>/dev/null || true
+          mv *.png www/ 2>/dev/null || true
 
-      - name: Initialize and Add iOS
-        # CAPACITOR_SKIP_POD_INSTALL=1 is the MANDATORY fix
-        # It stops the CLI from running the incompatible pod install
+      - name: Initialize iOS Platform
         env:
+          # This variable blocks the CLI's broken auto-install
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Inject Target and Install
+      - name: Manual Podfile Enforcement
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform to 14.0
+          # Explicitly set the platform version to 14.0
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -52,7 +49,7 @@ jobs:
           end
           EOF
           
-          # Clean and perform the install ourselves
+          # Force CocoaPods to use the correct target and clear cache
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -62,7 +59,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Force the build to respect the 14.0 target
+          # Explicitly pass the deployment target to the build command
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
