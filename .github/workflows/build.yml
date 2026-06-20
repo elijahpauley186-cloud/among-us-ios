@@ -15,13 +15,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
+      - name: Create Web Folder
         run: |
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
+          mkdir -p www
+          # Move files into www so Capacitor doesn't complain about root dir
+          mv *.html www/ 2>/dev/null || true
+          mv *.js www/ 2>/dev/null || true
+          mv *.css www/ 2>/dev/null || true
+          mv *.png www/ 2>/dev/null || true
 
-      - name: Initialize and Add iOS Platform
-        # This environment variable stops the CLI from running pod install automatically
+      - name: Setup iOS Environment
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -29,10 +32,10 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Configure and Install Pods
+      - name: Manual Pod Configuration
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform version to 14.0 or higher
+          # Explicitly create a clean Podfile with 14.0
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -42,25 +45,23 @@ jobs:
           end
           EOF
           
-          # Force a clean install with the updated target
+          # Clean and install manually
           cd ios/App
           rm -rf Pods Podfile.lock
-          pod install --repo-update
+          pod repo update
+          pod install
 
-      - name: Sync, Build, and Package
+      - name: Build
         run: |
           npx cap sync ios
           cd ios/App
-          # Build with the explicit deployment target
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
-          
-          # Package the IPA
           mkdir -p ../../Payload
           cp -r build/Release-iphoneos/App.app ../../Payload/
           cd ../..
           zip -r AmongUsDetectiveEvolution.ipa Payload
 
-      - name: Upload Artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: Among-Us-Detective-Evolution-App
