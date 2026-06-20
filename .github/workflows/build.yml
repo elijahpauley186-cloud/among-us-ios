@@ -27,9 +27,8 @@ jobs:
           mv *.css www/ 2>/dev/null || true
           mv *.png www/ 2>/dev/null || true
 
-      - name: Add iOS Platform
-        # This environment variable stops Capacitor from running 
-        # its internal pod install, which is what triggers the error.
+      - name: Initialize iOS Platform
+        # This prevents the CLI from running its own incompatible pod install
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -37,10 +36,10 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Manual Podfile Enforcement
+      - name: Enforce iOS 14.0 Target
         run: |
           mkdir -p ios/App
-          # Write the Podfile with the required deployment target
+          # Explicitly set the platform version to 14.0 to satisfy plugin requirements
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -50,7 +49,7 @@ jobs:
           end
           EOF
           
-          # Manually trigger pod installation for the enforced platform
+          # Force CocoaPods to use the new Podfile and clear caches
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -58,10 +57,9 @@ jobs:
 
       - name: Build and Package
         run: |
-          # Sync now without triggering another dependency check
           npx cap sync ios
           cd ios/App
-          # Explicitly set the deployment target during the build command
+          # Explicitly set deployment target during the build command for final compliance
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
