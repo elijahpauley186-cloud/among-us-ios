@@ -23,20 +23,17 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Initialize Platform
+      - name: Add Platform and Configure
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # This generates the App.xcodeproj file we need
-          npx cap add ios
-          # Immediately delete the generated Podfile so we can control it
-          rm -f ios/App/Podfile
-
-      - name: Configure and Install Pods
-        run: |
+          
+          # Skip the auto-install during 'add'
+          CAPACITOR_SKIP_POD_INSTALL=1 npx cap add ios
+          
           cd ios/App
-          # Create a clean Podfile with the 14.0 requirement and explicit project link
+          # Explicitly set the Podfile for iOS 14.0
           cat << 'EOF' > Podfile
           project 'App.xcodeproj'
           platform :ios, '14.0'
@@ -47,7 +44,7 @@ jobs:
           end
           EOF
           
-          # Now install manually
+          # Manually install dependencies now
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
