@@ -27,22 +27,18 @@ jobs:
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
+          # Explicitly set the platform version in the Podfile immediately
+          echo "platform :ios, '14.0'" > ios/App/Podfile
+          echo "use_frameworks!" >> ios/App/Podfile
+          echo "target 'App' do" >> ios/App/Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "end" >> ios/App/Podfile
 
       - name: Configure and Install Pods
         run: |
-          mkdir -p ios/App
-          # 1. Force a valid 14.0 target
-          cat << 'EOF' > ios/App/Podfile
-          platform :ios, '14.0'
-          use_frameworks!
-          target 'App' do
-            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-          end
-          EOF
-          
-          # 2. Purge old lock files and pods cache to ensure a fresh install
           cd ios/App
+          # Clean up any cached state that might hold onto old versions
           rm -rf Pods Podfile.lock
           pod install --repo-update
 
@@ -50,7 +46,8 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
+          # Ensure Xcode project settings use the target version
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           mkdir -p ../../Payload
           cp -r build/Release-iphoneos/App.app ../../Payload/
           cd ../..
