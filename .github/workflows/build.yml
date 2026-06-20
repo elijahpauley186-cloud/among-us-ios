@@ -25,12 +25,9 @@ jobs:
 
       - name: Initialize Platform
         run: |
-          # Use Capacitor 6 for native iOS 14.0 compatibility
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/ios@6 @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          
-          # Fake pod binary to bypass CLI sync check
           mkdir -p bin
           echo '#!/bin/bash' > bin/pod
           echo 'exit 0' >> bin/pod
@@ -58,14 +55,15 @@ jobs:
           npx cap copy ios
           cd ios/App
           
-          # Build with ARCHS=arm64 to force a clean device build
-          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 ARCHS=arm64
+          # Build to a predictable local folder
+          xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CONFIGURATION_BUILD_DIR=build_output CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0 ARCHS=arm64
           
-          # Dynamically find the App.app wherever Xcode placed it
-          APP_PATH=$(find . -type d -name "App.app" | grep "Release-iphoneos" | head -n 1)
+          # Locate the .app bundle within the build_output folder
+          APP_PATH=$(find build_output -maxdepth 1 -name "*.app" | head -n 1)
           
           if [ -z "$APP_PATH" ]; then
-            echo "Error: App.app not found."
+            echo "Error: App.app not found in build_output. Printing directory contents for debugging:"
+            ls -R build_output
             exit 1
           fi
           
