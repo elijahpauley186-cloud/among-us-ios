@@ -23,36 +23,40 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Setup iOS Workspace
+      - name: Initialize Platform
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # Skip adding plugins automatically to prevent the CLI from locking the Podfile version
-          npx cap add ios --no-plugin-updates || true
+          
+          # This command creates the ios directory. 
+          # We force it to finish by creating a fake 'pod' command so it thinks it succeeded
+          mkdir -p bin
+          echo '#!/bin/bash' > bin/pod
+          echo 'exit 0' >> bin/pod
+          chmod +x bin/pod
+          export PATH=$PWD/bin:$PATH
+          
+          npx cap add ios
 
-      - name: Force Clean and Install
+      - name: Configure and Install
         run: |
           cd ios/App
-          # Remove all CLI-generated pod artifacts
-          rm -rf Pods Podfile Podfile.lock
-          
-          # Create a fresh Podfile that forces a modern deployment target
+          # Now the folder exists, we can safely overwrite the Podfile
           cat << 'EOF' > Podfile
           platform :ios, '14.0'
           use_frameworks!
-          
           target 'App' do
-            # Use the local files without triggering auto-version-checking
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
           end
           EOF
           
-          # Perform the install
+          # Now perform a real install
+          rm -rf Pods Podfile.lock
           pod repo update
           pod install
-          
+
       - name: Build and Package
         run: |
           cd ios/App
