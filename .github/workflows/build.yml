@@ -24,15 +24,22 @@ jobs:
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
+          # 1. Prepare assets in a valid subdirectory
+          mkdir -p www
+          # Move html, js, and css files into www
+          mv *.html www/ 2>/dev/null || true
+          mv *.js www/ 2>/dev/null || true
+          mv *.css www/ 2>/dev/null || true
+          
+          # 2. Cleanup and Initialize
           rm -rf ios
-          # This command will generate a capacitor.config.json file for you
-          npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="."
+          npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
       - name: Configure and Install Pods
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform version to 14.0
+          # 1. Force a valid 14.0 target
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -42,7 +49,7 @@ jobs:
           end
           EOF
           
-          # Clean up and install
+          # 2. Purge old files and perform a clean install
           cd ios/App
           rm -rf Pods Podfile.lock
           pod install --repo-update
@@ -51,7 +58,10 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
+          # Build with explicit deployment target
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
+          
+          # Package the IPA
           mkdir -p ../../Payload
           cp -r build/Release-iphoneos/App.app ../../Payload/
           cd ../..
