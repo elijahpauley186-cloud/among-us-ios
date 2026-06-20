@@ -20,16 +20,8 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Prepare Assets
-        run: |
-          mkdir -p www
-          mv *.html www/ 2>/dev/null || true
-          mv *.js www/ 2>/dev/null || true
-          mv *.css www/ 2>/dev/null || true
-
-      - name: Initialize iOS Platform
-        # CAPACITOR_SKIP_POD_INSTALL=1 prevents the CLI from running 
-        # its own incompatible pod install
+      - name: Initialize and Add iOS Platform
+        # This environment variable stops the CLI from running pod install automatically
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -37,10 +29,10 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Configure Pods and Install
+      - name: Configure and Install Pods
         run: |
           mkdir -p ios/App
-          # Create a Podfile that explicitly requires iOS 14.0
+          # Explicitly set the platform version to 14.0 or higher
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -50,7 +42,7 @@ jobs:
           end
           EOF
           
-          # Clean environment and perform manual install
+          # Force a clean install with the updated target
           cd ios/App
           rm -rf Pods Podfile.lock
           pod install --repo-update
@@ -59,7 +51,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Build with explicit deployment target
+          # Build with the explicit deployment target
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           # Package the IPA
