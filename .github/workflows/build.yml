@@ -27,30 +27,28 @@ jobs:
           mv *.css www/ 2>/dev/null || true
           mv *.png www/ 2>/dev/null || true
 
-      - name: Setup iOS Platform
-        # CAPACITOR_SKIP_POD_INSTALL=1 tells Capacitor to add the platform
-        # without running the internal pod install command that causes your error.
+      - name: Setup Environment and Add iOS
         env:
+          # This is the most critical line: it tells Capacitor to create 
+          # the project WITHOUT triggering a build-breaking pod install.
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Enforce iOS 14.0 Target
+      - name: Inject Target and Install
         run: |
+          # 1. Force the Podfile to use iOS 14.0 before CocoaPods touches it
           mkdir -p ios/App
-          # This writes a brand new Podfile that forces iOS 14.0
-          cat << 'EOF' > ios/App/Podfile
-          platform :ios, '14.0'
-          use_frameworks!
-          target 'App' do
-            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-          end
-          EOF
-          
-          # Clean old pods to prevent cache conflicts
+          echo "platform :ios, '14.0'" > ios/App/Podfile
+          echo "use_frameworks!" >> ios/App/Podfile
+          echo "target 'App' do" >> ios/App/Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "end" >> ios/App/Podfile
+
+          # 2. Perform a "clean" install by clearing the cache
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -60,15 +58,14 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Force Xcode to use the 14.0 target
+          # Explicitly set the deployment target during the build phase
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
-          
           mkdir -p ../../Payload
           cp -r build/Release-iphoneos/App.app ../../Payload/
           cd ../..
           zip -r AmongUsDetectiveEvolution.ipa Payload
 
-      - name: Upload IPA
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Among-Us-Detective-Evolution-App
