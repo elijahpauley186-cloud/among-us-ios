@@ -20,26 +20,27 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Initialize and Add iOS Platform
-        env:
-          CAPACITOR_SKIP_POD_INSTALL: 1
+      - name: Prepare Assets
         run: |
-          # 1. Prepare assets in a valid subdirectory
           mkdir -p www
-          # Move html, js, and css files into www
           mv *.html www/ 2>/dev/null || true
           mv *.js www/ 2>/dev/null || true
           mv *.css www/ 2>/dev/null || true
-          
-          # 2. Cleanup and Initialize
+
+      - name: Initialize iOS Platform
+        # CAPACITOR_SKIP_POD_INSTALL=1 prevents the CLI from running 
+        # its own incompatible pod install
+        env:
+          CAPACITOR_SKIP_POD_INSTALL: 1
+        run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Configure and Install Pods
+      - name: Configure Pods and Install
         run: |
           mkdir -p ios/App
-          # 1. Force a valid 14.0 target
+          # Create a Podfile that explicitly requires iOS 14.0
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -49,7 +50,7 @@ jobs:
           end
           EOF
           
-          # 2. Purge old files and perform a clean install
+          # Clean environment and perform manual install
           cd ios/App
           rm -rf Pods Podfile.lock
           pod install --repo-update
