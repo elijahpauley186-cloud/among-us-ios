@@ -21,8 +21,6 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
       - name: Initialize and Add iOS Platform
-        # This environment variable forces Capacitor to skip the automatic
-        # pod install that has been causing your build failures.
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -30,10 +28,10 @@ jobs:
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Configure Podfile and Install
+      - name: Configure and Install Pods
         run: |
-          # 1. Create a clean Podfile with the mandatory iOS 14.0 target
           mkdir -p ios/App
+          # 1. Force a valid 14.0 target
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -43,8 +41,9 @@ jobs:
           end
           EOF
           
-          # 2. Now perform the installation manually with the updated target
+          # 2. Purge old lock files and pods cache to ensure a fresh install
           cd ios/App
+          rm -rf Pods Podfile.lock
           pod install --repo-update
 
       - name: Sync, Build, and Package
