@@ -20,19 +20,30 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Initialize and Add iOS
+      - name: Initialize and Add iOS Platform
+        # CAPACITOR_SKIP_POD_INSTALL=1 stops the CLI from running pod install
+        env:
+          CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # Adding the platform
           npx cap add ios
 
-      - name: Update Deployment Target and Install Pods
+      - name: Configure Podfile and Install
         run: |
+          # Create a fresh Podfile with the required iOS 14.0 target
+          mkdir -p ios/App
+          cat << 'EOF' > ios/App/Podfile
+          platform :ios, '14.0'
+          use_frameworks!
+          target 'App' do
+            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+          end
+          EOF
+          
+          # Now perform the install manually
           cd ios/App
-          # Force the deployment target to 14.0 in the Podfile
-          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/g" Podfile
-          # Now perform the install with the updated target
           pod install --repo-update
 
       - name: Sync and Build
