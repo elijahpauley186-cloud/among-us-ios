@@ -23,23 +23,20 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Initialize Manual Scaffolding
+      - name: Add iOS Platform
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
-          # Initialize without adding the native platform
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          
-          # Manually create the directory structure expected by CocoaPods
-          mkdir -p ios/App/App
-          # Create a minimal config to satisfy Capacitor
-          echo '{"appId": "com.tvman.amongusdetectiveevolution", "appName": "Among Us: Detective Evolution", "webDir": "www"}' > ios/App/App/capacitor.config.json
+          # --no-pod-install prevents the CLI from triggering the failed dependency check
+          npx cap add ios --no-pod-install
 
-      - name: Create and Install Podfile
+      - name: Configure and Install Pods
         run: |
           cd ios/App
-          # Force the Podfile to use iOS 14.0 and target the project
+          # Explicitly inject the project and platform into the Podfile
           cat << 'EOF' > Podfile
+          project 'App.xcodeproj'
           platform :ios, '14.0'
           use_frameworks!
           target 'App' do
@@ -48,7 +45,7 @@ jobs:
           end
           EOF
           
-          # Clean and install dependencies manually
+          # Clean and install dependencies manually with the correct target
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
@@ -56,7 +53,7 @@ jobs:
       - name: Build and Package
         run: |
           cd ios/App
-          # Perform build directly via xcodebuild, bypassing 'cap sync'
+          # Build using the generated workspace
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
