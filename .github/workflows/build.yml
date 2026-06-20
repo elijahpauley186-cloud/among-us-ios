@@ -15,23 +15,20 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
-
       - name: Prepare Web Assets
         run: |
           mkdir -p www
-          mv *.html www/ 2>/dev/null || true
-          mv *.js www/ 2>/dev/null || true
-          mv *.css www/ 2>/dev/null || true
-          mv *.png www/ 2>/dev/null || true
+          [ -f index.html ] && cp index.html www/
+          [ -f style.css ] && cp style.css www/
+          [ -f game.js ] && cp game.js www/
+          [ -f icon.png ] && cp icon.png www/
 
-      - name: Initialize iOS Platform
+      - name: Initialize iOS Platform (Manual Mode)
+        # CAPACITOR_SKIP_POD_INSTALL stops the CLI from running its internal, incompatible pod install
         env:
-          # This variable blocks the CLI's broken auto-install
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
@@ -39,7 +36,7 @@ jobs:
       - name: Manual Podfile Enforcement
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform version to 14.0
+          # Explicitly set the platform to 14.0 in the Podfile
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -49,7 +46,7 @@ jobs:
           end
           EOF
           
-          # Force CocoaPods to use the correct target and clear cache
+          # Manually install pods with the correct target
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -59,7 +56,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Explicitly pass the deployment target to the build command
+          # Ensure Xcode respects the 14.0 target
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
