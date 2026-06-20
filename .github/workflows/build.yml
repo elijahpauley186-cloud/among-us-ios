@@ -23,45 +23,38 @@ jobs:
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
-      - name: Initialize Platform
+      - name: Setup iOS Workspace
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # Use || true to prevent the workflow from crashing during initial sync
-          CAPACITOR_SKIP_POD_INSTALL=1 npx cap add ios || true
+          # Skip adding plugins automatically to prevent the CLI from locking the Podfile version
+          npx cap add ios --no-plugin-updates || true
 
-      - name: Configure and Install
+      - name: Force Clean and Install
         run: |
           cd ios/App
-          # Create the Podfile with the post_install hook to force the deployment target
+          # Remove all CLI-generated pod artifacts
+          rm -rf Pods Podfile Podfile.lock
+          
+          # Create a fresh Podfile that forces a modern deployment target
           cat << 'EOF' > Podfile
-          project 'App.xcodeproj'
           platform :ios, '14.0'
           use_frameworks!
           
           target 'App' do
+            # Use the local files without triggering auto-version-checking
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
           end
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-              end
-            end
-          end
           EOF
           
-          # Manually install dependencies
-          rm -rf Pods Podfile.lock
+          # Perform the install
           pod repo update
           pod install
-
+          
       - name: Build and Package
         run: |
-          npx cap copy ios
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
