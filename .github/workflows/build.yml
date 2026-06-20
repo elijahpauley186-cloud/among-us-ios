@@ -20,54 +20,31 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Manually Bootstrap iOS Platform
+      - name: Initialize and Add iOS
         run: |
-          # 1. Start fresh
           rm -rf ios
-          
-          # 2. Create the directory tree that Capacitor expects
-          mkdir -p ios/App/App
-          
-          # 3. Create a valid Podfile with the 14.0 target IMMEDIATELY
-          cat << 'EOF' > ios/App/Podfile
-          platform :ios, '14.0'
-          use_frameworks!
-          target 'App' do
-            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
-            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
-          end
-          EOF
-          
-          # 4. Initialize Capacitor (this will now detect the directory and skip auto-install)
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
 
-      - name: Finalize Dependencies
+      - name: Run Pod Install
         run: |
           cd ios/App
+          # This forces a clean install of all dependencies
           pod install --repo-update
 
-      - name: Generate App Icons
+      - name: Sync and Build
         run: |
-          mkdir -p assets
-          cp icon.png assets/icon-only.png
-          npx capacitor-assets generate --ios
-
-      - name: Sync Capacitor
-        run: npx cap sync ios
-
-      - name: Build Xcode Project
-        run: |
+          npx cap sync ios
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
 
-      - name: Package IPA Bundle
+      - name: Package IPA
         run: |
           mkdir -p Payload
           cp -r ios/App/build/Release-iphoneos/App.app Payload/
           zip -r AmongUsDetectiveEvolution.ipa Payload
 
-      - name: Upload Finished IPA Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Among-Us-Detective-Evolution-App
