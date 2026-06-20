@@ -21,8 +21,8 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
       - name: Initialize and Add iOS Platform
-        # This environment variable tells Capacitor to add the platform 
-        # WITHOUT running pod install, allowing us to configure the Podfile first.
+        # This environment variable forces Capacitor to skip the automatic
+        # pod install that has been causing your build failures.
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -32,7 +32,7 @@ jobs:
 
       - name: Configure Podfile and Install
         run: |
-          # 1. Create a clean Podfile with the required iOS 14.0 target
+          # 1. Create a clean Podfile with the mandatory iOS 14.0 target
           mkdir -p ios/App
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
@@ -43,20 +43,18 @@ jobs:
           end
           EOF
           
-          # 2. Now perform the install manually on our terms
+          # 2. Now perform the installation manually with the updated target
           cd ios/App
           pod install --repo-update
 
-      - name: Sync and Build
+      - name: Sync, Build, and Package
         run: |
           npx cap sync ios
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
-
-      - name: Package IPA
-        run: |
-          mkdir -p Payload
-          cp -r ios/App/build/Release-iphoneos/App.app Payload/
+          mkdir -p ../../Payload
+          cp -r build/Release-iphoneos/App.app ../../Payload/
+          cd ../..
           zip -r AmongUsDetectiveEvolution.ipa Payload
 
       - name: Upload Artifact
