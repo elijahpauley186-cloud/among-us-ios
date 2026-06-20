@@ -40,17 +40,14 @@ jobs:
       - name: Configure and Install
         run: |
           cd ios/App
-          # This Podfile uses both pre_install (for solver) and post_install (for build settings)
+          # Brutally force every podspec in node_modules to accept 14.0
+          find ../../node_modules/@capacitor/ios -name "*.podspec" -exec sed -i '' "s/s.deployment_target = .*/s.deployment_target = '14.0'/g" {} +
+          find ../../node_modules/@capacitor/ios -name "*.podspec" -exec sed -i '' "s/ios.deployment_target = .*/ios.deployment_target = '14.0'/g" {} +
+          
+          # Create fresh Podfile with post_install cleanup
           cat << 'EOF' > Podfile
           platform :ios, '14.0'
           use_frameworks!
-          
-          pre_install do |installer|
-            installer.pod_targets.each do |target|
-              target.send(:instance_variable_set, :@minimum_deployment_target, '14.0')
-            end
-          end
-          
           target 'App' do
             pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
             pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
@@ -69,7 +66,7 @@ jobs:
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
-          
+
       - name: Build and Package
         run: |
           npx cap copy ios
