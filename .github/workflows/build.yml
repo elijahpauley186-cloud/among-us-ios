@@ -20,15 +20,28 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Create Native iOS Project
-        # By setting the target environment variable here, Capacitor 
-        # initializes the project with the correct platform version.
-        env:
-          IOS_DEPLOYMENT_TARGET: "14.0"
+      - name: Pre-configure iOS Project
         run: |
-          rm -rf ios
+          # Create the directory structure manually so Capacitor skips its own initialization
+          mkdir -p ios/App
+          # Create a Podfile with the correct target BEFORE Capacitor touches anything
+          echo "platform :ios, '14.0'" > ios/App/Podfile
+          echo "use_frameworks!" >> ios/App/Podfile
+          echo "target 'App' do" >> ios/App/Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
+          echo "end" >> ios/App/Podfile
+
+      - name: Initialize Capacitor
+        run: |
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
+          # This should now see the existing directory and skip automatic pod install
           npx cap add ios
+
+      - name: Install Pods
+        run: |
+          cd ios/App
+          pod install --repo-update
 
       - name: Generate App Icons
         run: |
@@ -42,7 +55,6 @@ jobs:
       - name: Build Xcode Project
         run: |
           cd ios/App
-          pod install
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release CODE_SIGNING_ALLOWED=NO
 
       - name: Package IPA Bundle
