@@ -20,26 +20,27 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Pre-configure iOS Project
+      - name: Initialize and Add iOS Platform
         run: |
-          # Create the directory structure manually so Capacitor skips its own initialization
-          mkdir -p ios/App
-          # Create a Podfile with the correct target BEFORE Capacitor touches anything
-          echo "platform :ios, '14.0'" > ios/App/Podfile
-          echo "use_frameworks!" >> ios/App/Podfile
-          echo "target 'App' do" >> ios/App/Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> ios/App/Podfile
-          echo "end" >> ios/App/Podfile
-
-      - name: Initialize Capacitor
-        run: |
+          rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          # This should now see the existing directory and skip automatic pod install
+          # This variable explicitly tells Capacitor to skip pod installation during this step
+          export CAPACITOR_SKIP_POD_INSTALL=1
           npx cap add ios
 
-      - name: Install Pods
+      - name: Configure and Install Pods
         run: |
+          # Create a fresh Podfile with a valid iOS 14.0 deployment target
+          cat << 'EOF' > ios/App/Podfile
+          platform :ios, '14.0'
+          use_frameworks!
+          target 'App' do
+            pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'
+            pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
+          end
+          EOF
+          
+          # Now perform the installation manually
           cd ios/App
           pod install --repo-update
 
