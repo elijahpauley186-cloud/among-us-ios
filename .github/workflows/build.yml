@@ -27,8 +27,9 @@ jobs:
           mv *.css www/ 2>/dev/null || true
           mv *.png www/ 2>/dev/null || true
 
-      - name: Initialize iOS Platform
-        # This prevents the CLI from running its own incompatible pod install
+      - name: Add iOS Platform
+        # This environment variable is critical: it disables the 
+        # automatic pod install that is causing your build to fail.
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
@@ -39,7 +40,7 @@ jobs:
       - name: Enforce iOS 14.0 Target
         run: |
           mkdir -p ios/App
-          # Explicitly set the platform version to 14.0 to satisfy plugin requirements
+          # Explicitly write a Podfile that requires iOS 14.0
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -49,7 +50,7 @@ jobs:
           end
           EOF
           
-          # Force CocoaPods to use the new Podfile and clear caches
+          # Clean and install dependencies manually with the enforced target
           cd ios/App
           rm -rf Pods Podfile.lock
           pod repo update
@@ -59,7 +60,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
-          # Explicitly set deployment target during the build command for final compliance
+          # Force Xcode to use the 14.0 target
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
