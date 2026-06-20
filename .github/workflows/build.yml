@@ -1,4 +1,4 @@
-name: Build iOS IPA
+name: name: Build iOS IPA
 on:
   push:
     branches: [ main ]
@@ -15,22 +15,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Dependencies
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
-
       - name: Prepare Web Assets
         run: |
           mkdir -p www
+          # Moving files to www as Capacitor expects
           [ -f index.html ] && mv index.html www/ || true
           [ -f style.css ] && mv style.css www/ || true
           [ -f game.js ] && mv game.js www/ || true
           [ -f icon.png ] && mv icon.png www/ || true
 
       - name: Add iOS Platform
+        # This environment variable forces the CLI to skip pod install
         env:
           CAPACITOR_SKIP_POD_INSTALL: 1
         run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
           npx cap add ios
@@ -38,7 +37,7 @@ jobs:
       - name: Fix Podfile and Install
         run: |
           cd ios/App
-          # Explicitly set the project and target version
+          # Force the Podfile to use iOS 14.0 and point to the correct project
           cat << 'EOF' > Podfile
           project 'App.xcodeproj'
           platform :ios, '14.0'
@@ -49,7 +48,7 @@ jobs:
           end
           EOF
           
-          # Clean and install
+          # Clean and install dependencies manually
           rm -rf Pods Podfile.lock
           pod repo update
           pod install
@@ -58,6 +57,7 @@ jobs:
         run: |
           npx cap sync ios
           cd ios/App
+          # Explicitly set the deployment target during the build command
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
           
           mkdir -p ../../Payload
