@@ -28,13 +28,11 @@ jobs:
           mv *.png www/ 2>/dev/null || true
 
       - name: Add iOS Platform
-        # CAPACITOR_SKIP_POD_INSTALL=1 prevents the CLI from running its own internal pod install
-        env:
-          CAPACITOR_SKIP_POD_INSTALL: 1
+        # --no-sync prevents the CLI from running pod install or sync automatically
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios
+          npx cap add ios --no-sync
 
       - name: Manual Podfile Enforcement
         run: |
@@ -57,8 +55,8 @@ jobs:
 
       - name: Build and Package
         run: |
-          # Use npx cap sync, but it will no longer trigger an incompatible install
-          npx cap sync ios
+          # Sync now without updating dependencies, as we just handled it
+          npx cap sync ios --no-update
           cd ios/App
           # Ensure Xcode respects the 14.0 target during build
           xcodebuild -workspace App.xcworkspace -scheme App -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO IPHONEOS_DEPLOYMENT_TARGET=14.0
