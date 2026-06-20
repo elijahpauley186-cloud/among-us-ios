@@ -20,17 +20,17 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/assets
 
-      - name: Create Native iOS Project
+      - name: Add iOS Platform (Skip Pods)
         run: |
           rm -rf ios
           npx cap init "Among Us: Detective Evolution" "com.tvman.amongusdetectiveevolution" --web-dir="www"
-          npx cap add ios || true
-          # FORCE DELETE the Podfile so CocoaPods cannot run a failed check
-          rm -f ios/App/Podfile
+          # This variable prevents the CLI from running 'pod install' during this step
+          export CAPACITOR_SKIP_POD_INSTALL=1
+          npx cap add ios
 
-      - name: Setup Valid Podfile and Install
+      - name: Configure and Install Pods
         run: |
-          # Recreate the Podfile with the specific iOS 14.0 target requirement
+          # 1. Create the Podfile with a high enough target
           cat << 'EOF' > ios/App/Podfile
           platform :ios, '14.0'
           use_frameworks!
@@ -40,7 +40,7 @@ jobs:
           end
           EOF
           
-          # Now run the install manually
+          # 2. Perform the installation manually
           cd ios/App
           pod install --repo-update
 
@@ -50,7 +50,7 @@ jobs:
           cp icon.png assets/icon-only.png
           npx capacitor-assets generate --ios
 
-      - name: Sync Code
+      - name: Sync Capacitor
         run: npx cap sync ios
 
       - name: Build Xcode Project
